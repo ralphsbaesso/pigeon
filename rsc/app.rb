@@ -1,19 +1,33 @@
 # frozen_string_literal: true
 
-require_relative 'app/discord'
+require_relative 'app/pigeon'
 require_relative 'app/linker'
+require_relative 'app/discord'
 
-class App
-  def initialize(channel)
-    @resource = App.const_get "App::#{channel.split('_').map(&:capitalize).join}"
-  end
+module App
+  class << self
+    def call(channel_name, **kwargs)
+      resource = App.const_get("App::#{App.camelize(channel_name)}")
+      pigeon = resource.new(**kwargs.transform_keys(&:downcase))
+      pigeon.deliver
+      true
+    end
 
-  def call(**kwargs)
-    resource = @resource.new(**kwargs)
-    resource.deliver
-  end
+    def root
+      File.join(Dir.pwd, 'rsc')
+    end
 
-  def self.root
-    File.join(Dir.pwd, 'rsc')
+    def underscore(str)
+      str.to_s
+         .gsub(/::/, '/')
+         .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
+         .gsub(/([a-z\d])([A-Z])/, '\1_\2')
+         .tr('-', '_')
+         .downcase
+    end
+
+    def camelize(str)
+      str.to_s.split('_').map(&:capitalize).join
+    end
   end
 end
